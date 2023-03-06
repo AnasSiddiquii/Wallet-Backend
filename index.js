@@ -143,7 +143,6 @@ app.post('/login', async (req,resp) => {
 
 
 // Products
-
 app.get('/products', async (req,resp) => {
     const product = await Product.find()
     if(product.length>0){
@@ -154,14 +153,27 @@ app.get('/products', async (req,resp) => {
     }
 })
 
+// save image
+const Storage = multer.diskStorage({
+    destination:'photos',
+    filename:(req,file,cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + '.png' )
+    }
+})
+
+const upload = multer({storage:Storage})
+
+// add
+// add product validation
 app.post('/checkProduct', async (req,resp) => {
-    const { name, state } = req.body
+    const { title, price, offer } = req.body
     
-    if(!name || !state){
+    if(!title || !price || !offer){
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
     else{
-        const productExists = await Product.findOne({ name: name, state: state })
+        const productExists = await Product.findOne({ title: title })
 
         if(productExists){
             resp.status(400).json({ error: 'Product Already Exists'})
@@ -172,35 +184,17 @@ app.post('/checkProduct', async (req,resp) => {
     }
 })
 
-const Storage1 = multer.diskStorage({
-    destination:'photos',
-    filename:(req,file,cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + '.png' )
-    }
+// add product
+app.post('/addProduct', upload.single('photo'), async (req,resp) => {
+    const photo = req.file.filename
+    const { title, price, offer } = req.body
+    
+    const product = new Product({ photo, title, price, offer })
+    await product.save()
+    resp.status(201).json({ message: 'Registered Successfully' })
 })
 
-const upload1 = multer({storage:Storage1})
-
-app.post('/addProduct', upload1.single('photo'), async (req,resp) => {
-    try{
-        const { name, state } = req.body
-        const photo = req.file.filename
-        
-        const product = new Product({ name, photo, state })
-        await product.save()
-        resp.status(201).json({ message: 'Registered Successfully' })
-    }
-    catch{
-        resp.status(400).json({ error: 'Error' })
-    }
-})
-
-app.delete('/deleteProduct/:id', async (req,resp) => {
-    const result = await Product.deleteOne({_id:req.params.id})
-    resp.send(result)
-})
-
+// update
 // pre-filled data
 app.get('/updateProduct/:id', async (req,resp) => {
     const product = await Product.findOne({_id:req.params.id})
@@ -212,19 +206,42 @@ app.get('/updateProduct/:id', async (req,resp) => {
     }
 })
 
+// update without image
 app.put('/updateProduct/:id', async (req,resp) => {
-    const result = await Product.updateOne(
-        {_id:req.params.id},
-        {$set:req.body}
+    const { title, price, offer } = req.body
+    
+    await Product.updateOne(
+        { _id: req.params.id },
+        { $set: { title, price, offer }}
     )
+    resp.status(202).json({ message: 'Updated Successfully' })
+})
+    
+// update with image
+app.put('/updatePhoto/:id', upload.single('photo'), async (req,resp) => {
+    const photo = req.file.filename
+    const { title, price, offer } = req.body
+
+    await Product.updateOne(
+        { _id: req.params.id },
+        {$set: { photo, title, price, offer }}
+    )
+    resp.status(202).json({ message: 'Updated Successfully' })
+})
+
+// delete
+app.delete('/deleteProduct/:id', async (req,resp) => {
+    const result = await Product.deleteOne({_id:req.params.id})
     resp.send(result)
 })
 
+// search
 app.get('/searchProduct/:key', async (req,resp) => {
     const product = await Product.find({
         '$or':[
-            {name:{$regex:req.params.key}},
-            {state:{$regex:req.params.key}}
+            {title:{$regex:req.params.key}},
+            {price:{$regex:req.params.key}},
+            {offer:{$regex:req.params.key}}
         ]
     })
     if(product.length>0){
