@@ -91,6 +91,57 @@ app.post('/adminLogin', async (req,resp) => {
 
 
 
+// Users
+app.post('/signup', async (req,resp) => {
+    const { name, email, password, cpassword, post } = req.body
+    
+    if(!name || !email || !password || !cpassword || !post){
+        resp.status(400).json({ error: 'Please Fill All Fields' })
+    }
+    else{
+        const userExists = await User.findOne({ email: email })
+        
+        if(userExists){
+            resp.status(400).json({ error: 'Email Already Exists' })
+        }
+        else if(password != cpassword){
+            resp.status(400).json({ error: 'Password Do Not Match' })
+        }
+        else{
+            const user = new User({ name, email, password, cpassword, post })
+            await user.save()
+            resp.status(201).json({ message: 'Registered Successfully' })
+        }
+    }
+})
+
+app.post('/login', async (req,resp) => {
+    const { email, password } = req.body
+    
+    if(!email || !password){
+        resp.status(400).json({ error: 'Please Fill All Fields' })
+    }
+    else{
+        const userExists = await User.findOne({ email: email })
+
+        if(userExists){
+            const match = await bcrypt.compare(password, userExists.password)
+                        
+            if(!match){
+                resp.status(400).json({ error: 'Invalid Credientials'})
+            }
+            else{
+                resp.send(userExists) // Login Successful
+            }
+        }
+        else{
+            resp.status(400).json({ error: 'Invalid Credientials'})
+        }
+    }
+})
+
+
+
 // Products
 app.get('/products', async (req,resp) => {
     const product = await Product.find()
