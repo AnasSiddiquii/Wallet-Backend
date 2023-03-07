@@ -189,7 +189,7 @@ app.post('/addProduct', upload.single('photo'), async (req,resp) => {
     const photo = req.file.filename
     const { title, price, offer } = req.body
     
-    const product = new Product({ photo, title, price, offer })
+    const product = new Product({ title, photo, price, offer })
     await product.save()
     resp.status(201).json({ message: 'Registered Successfully' })
 })
@@ -224,7 +224,7 @@ app.put('/updatePhoto/:id', upload.single('photo'), async (req,resp) => {
 
     await Product.updateOne(
         { _id: req.params.id },
-        {$set: { photo, title, price, offer }}
+        {$set: { title, photo, price, offer }}
     )
     resp.status(202).json({ message: 'Updated Successfully' })
 })
