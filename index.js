@@ -165,45 +165,55 @@ const Storage = multer.diskStorage({
 })
 const upload = multer({storage:Storage})
 
-// add
+// Add
 // add product validation
 app.post('/checkProduct', async (req,resp) => {
-    const { title, price, offer, description } = req.body
+    const { title, price, offer, wholesale, description } = req.body
     
-    if(!title || !price || !offer || !description){
+    if(!title || !price || !offer || !wholesale || !description){
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
     else{
-        const productExists = await Product.findOne({ title: title })
-
-        if(productExists){
-            resp.status(400).json({ error: 'Product Already Exists'})
+        if( (price>0 && price<999999) && (offer>0 && offer<999999) && (wholesale>0 && wholesale<999999) ){
+            const productExists = await Product.findOne({ title: title })
+            
+            if(productExists){
+                resp.status(400).json({ error: 'Product Already Exists'})
+            }
+            else{
+                resp.status(202).json({ message: 'New Product'})
+            }
         }
         else{
-            resp.status(202).json({ message: 'New Product'})
+            resp.status(400).json({ error: 'Incorrect Price ' })
         }
     }
 })
 
 // add product
 app.post('/addProduct', upload.fields([ { name: 'cphoto', maxCount: 1 }, { name: 'fphoto', maxCount: 1 }, { name: 'bphoto', maxCount: 1 } ]), async (req, resp) => {
-    const { title, price, offer, description } = req.body
+    const { title, price, offer, wholesale, description } = req.body
 
-    if (!title || !price || !offer || !description) {
+    if (!title || !price || !offer || !wholesale || !description) {
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
     else {
-        const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
-        const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
-        const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
-        
-        const product = new Product({ cphoto, fphoto, bphoto, title, price, offer, description })
-        await product.save()
-        resp.status(201).json({ message: 'Registered Successfully' })
+        if( (price>0 && price<999999) && (offer>0 && offer<999999) && (wholesale>0 && wholesale<999999) ){
+            const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
+            const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
+            const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
+            
+            const product = new Product({ cphoto, fphoto, bphoto, title, price, offer, wholesale, description })
+            await product.save()
+            resp.status(201).json({ message: 'Registered Successfully' })
+        }
+        else{
+            resp.status(400).json({ error: 'Incorrect Price ' })
+        }
     }
 })
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-// update
+
+// Update
 // pre-filled data
 app.get('/updateProduct/:id', async (req,resp) => {
     const product = await Product.findOne({_id:req.params.id})
@@ -217,54 +227,83 @@ app.get('/updateProduct/:id', async (req,resp) => {
 
 // update without image
 app.put('/updateProduct/:id', async (req,resp) => {
-    const { title, price, offer, description } = req.body
+    const { title, price, offer, wholesale, description } = req.body
     
-    if (!title || !price || !offer || !description) {
+    if (!title || !price || !offer || !wholesale || !description) {
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
     else{
-        await Product.updateOne(
+        if( (price>0 && price<999999) && (offer>0 && offer<999999) && (wholesale>0 && wholesale<999999) ){
+            await Product.updateOne(
             { _id: req.params.id },
-            { $set: { title, price, offer, description }}
-        )
-        resp.status(202).json({ message: 'Updated Successfully' })
+                { $set: { title, price, offer, wholesale, description }}
+            )
+            resp.status(202).json({ message: 'Updated Successfully' })
+        }
+        else{
+            resp.status(400).json({ error: 'Incorrect Price ' })
+        }
     }
 })
     
 // update with image
 app.put('/updatePhoto/:id', upload.fields([ { name: 'cphoto', maxCount: 1 }, { name: 'fphoto', maxCount: 1 }, { name: 'bphoto', maxCount: 1 } ]), async (req,resp) => {
-    const { title, price, offer, description } = req.body
+    const { title, price, offer, wholesale, description } = req.body
 
-    if (!title || !price || !offer || !description) {
+    if (!title || !price || !offer || !wholesale || !description) {
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
-    else {
-        const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
-        const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
-        const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
-
-        await Product.updateOne(
-            { _id: req.params.id },
-            {$set: { cphoto, fphoto, bphoto, title, price, offer, description }}
-        )
-        resp.status(202).json({ message: 'Updated Successfully' })
+    else{
+        if( (price>0 && price<999999) && (offer>0 && offer<999999) && (wholesale>0 && wholesale<999999) ){
+            const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
+            const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
+            const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
+            
+            await Product.updateOne(
+                { _id: req.params.id },
+                {$set: { cphoto, fphoto, bphoto, title, price, offer, wholesale, description }}
+            )
+            resp.status(202).json({ message: 'Updated Successfully' })
+        }
+        else{
+            resp.status(400).json({ error: 'Incorrect Price ' })
+        }
     }
 
 })
 
-// delete
+// Delete
 app.delete('/deleteProduct/:id', async (req,resp) => {
     const result = await Product.deleteOne({_id:req.params.id})
     resp.send(result)
 })
 
-// search
+// Search
+// retailer search
 app.get('/searchProduct/:key', async (req,resp) => {
     const product = await Product.find({
         '$or':[
             {title:{$regex:req.params.key}},
             {price:{$regex:req.params.key}},
             {offer:{$regex:req.params.key}},
+            {description:{$regex:req.params.key}}
+        ]
+    })
+    if(product.length>0){
+        resp.send(product)
+    }
+    else{
+        resp.send({result:'No Product Found'})
+    }
+})
+
+// wholesaler search
+app.get('/searchProducts/:key', async (req,resp) => {
+    const product = await Product.find({
+        '$or':[
+            {title:{$regex:req.params.key}},
+            {offer:{$regex:req.params.key}},
+            {wholesale:{$regex:req.params.key}},
             {description:{$regex:req.params.key}}
         ]
     })
