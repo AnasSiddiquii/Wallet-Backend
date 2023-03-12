@@ -32,7 +32,9 @@ app.get('/', (req, resp)  =>  {
                 </style>
             </head>
             <body>
-                <h1><a href="https://wallet.iice.foundation">Wallet</a></h1>
+                <h1>
+                    <a href="https://wallet.iice.foundation">Wallet</a>
+                </h1>
             </body>
         </html>
     `);
@@ -161,15 +163,14 @@ const Storage = multer.diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + '.png' )
     }
 })
-
 const upload = multer({storage:Storage})
 
 // add
 // add product validation
 app.post('/checkProduct', async (req,resp) => {
-    const { title, price, offer } = req.body
+    const { title, price, offer, description } = req.body
     
-    if(!title || !price || !offer){
+    if(!title || !price || !offer || !description){
         resp.status(400).json({ error: 'Please Fill All Fields' })
     }
     else{
@@ -179,21 +180,29 @@ app.post('/checkProduct', async (req,resp) => {
             resp.status(400).json({ error: 'Product Already Exists'})
         }
         else{
-            resp.status(202).json({ message: 'Product Do Not Exists'})
+            resp.status(202).json({ message: 'New Product'})
         }
     }
 })
 
 // add product
-app.post('/addProduct', upload.single('photo'), async (req,resp) => {
-    const photo = req.file.filename
-    const { title, price, offer } = req.body
-    
-    const product = new Product({ title, photo, price, offer })
-    await product.save()
-    resp.status(201).json({ message: 'Registered Successfully' })
-})
+app.post('/addProduct', upload.fields([ { name: 'cphoto', maxCount: 1 }, { name: 'fphoto', maxCount: 1 }, { name: 'bphoto', maxCount: 1 } ]), async (req, resp) => {
+    const { title, price, offer, description } = req.body
 
+    if (!title || !price || !offer || !description) {
+        resp.status(400).json({ error: 'Please Fill All Fields' })
+    }
+    else {
+        const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
+        const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
+        const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
+        
+        const product = new Product({ cphoto, fphoto, bphoto, title, price, offer, description })
+        await product.save()
+        resp.status(201).json({ message: 'Registered Successfully' })
+    }
+})
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 // update
 // pre-filled data
 app.get('/updateProduct/:id', async (req,resp) => {
@@ -208,25 +217,39 @@ app.get('/updateProduct/:id', async (req,resp) => {
 
 // update without image
 app.put('/updateProduct/:id', async (req,resp) => {
-    const { title, price, offer } = req.body
+    const { title, price, offer, description } = req.body
     
-    await Product.updateOne(
-        { _id: req.params.id },
-        { $set: { title, price, offer }}
-    )
-    resp.status(202).json({ message: 'Updated Successfully' })
+    if (!title || !price || !offer || !description) {
+        resp.status(400).json({ error: 'Please Fill All Fields' })
+    }
+    else{
+        await Product.updateOne(
+            { _id: req.params.id },
+            { $set: { title, price, offer, description }}
+        )
+        resp.status(202).json({ message: 'Updated Successfully' })
+    }
 })
     
 // update with image
-app.put('/updatePhoto/:id', upload.single('photo'), async (req,resp) => {
-    const photo = req.file.filename
-    const { title, price, offer } = req.body
+app.put('/updatePhoto/:id', upload.fields([ { name: 'cphoto', maxCount: 1 }, { name: 'fphoto', maxCount: 1 }, { name: 'bphoto', maxCount: 1 } ]), async (req,resp) => {
+    const { title, price, offer, description } = req.body
 
-    await Product.updateOne(
-        { _id: req.params.id },
-        {$set: { title, photo, price, offer }}
-    )
-    resp.status(202).json({ message: 'Updated Successfully' })
+    if (!title || !price || !offer || !description) {
+        resp.status(400).json({ error: 'Please Fill All Fields' })
+    }
+    else {
+        const cphoto = req.files['cphoto'] ? req.files['cphoto'][0].filename : ''
+        const fphoto = req.files['fphoto'] ? req.files['fphoto'][0].filename : ''
+        const bphoto = req.files['bphoto'] ? req.files['bphoto'][0].filename : ''
+
+        await Product.updateOne(
+            { _id: req.params.id },
+            {$set: { cphoto, fphoto, bphoto, title, price, offer, description }}
+        )
+        resp.status(202).json({ message: 'Updated Successfully' })
+    }
+
 })
 
 // delete
@@ -241,7 +264,8 @@ app.get('/searchProduct/:key', async (req,resp) => {
         '$or':[
             {title:{$regex:req.params.key}},
             {price:{$regex:req.params.key}},
-            {offer:{$regex:req.params.key}}
+            {offer:{$regex:req.params.key}},
+            {description:{$regex:req.params.key}}
         ]
     })
     if(product.length>0){
